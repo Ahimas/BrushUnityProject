@@ -10,17 +10,37 @@ namespace PrefabBrushPlugin
         [Serializable]
         public class Entry
         {
+            [Tooltip("Prefab to place.")]
             public GameObject prefab;
-            [Min(0f)] public float weight = 1f;
+
+            [Tooltip("Relative chance of this prefab being picked. 1 = most frequent; 0 = rarest, but still possible.")]
+            [Range(0f, 1f)] public float weight = 1f;
         }
 
+        public const float MinWeight = 0.01f;
+
+        [Tooltip("Prefabs the brush picks from randomly, according to their weights.")]
         public Entry[] entries = new Entry[0];
+
+        [Tooltip("Place only on objects with the selected tag (and their child renderers).")]
         public bool useTagFilter;
+
+        [Tooltip("Tag required on the surface object when the tag filter is enabled.")]
         public string tag = "Untagged";
+
+        [Tooltip("Rotate each placed object by a random angle around its local Y axis.")]
         public bool randomYRotation = true;
+
+        [Tooltip("Object orientation: 0 = always world up (trees on slopes stay vertical), 1 = local Y follows the surface normal (walls, ceilings).")]
         [Range(0f, 1f)] public float normalAlignment = 1f;
+
+        [Tooltip("Random uniform scale multiplier range (min, max) applied on top of the prefab's own scale.")]
         public Vector2 scaleRange = Vector2.one;
+
+        [Tooltip("Multiplier for the minimum distance between objects. 1 = their sizes just touch, above 1 = gaps, 0 = overlap allowed.")]
         [Min(0f)] public float spacing = 1f;
+
+        [Tooltip("Radius (world units) for Shift+LMB erasing. Objects whose pivot is inside it are removed.")]
         [Min(0.01f)] public float eraseRadius = 1f;
 
         [NonSerialized] bool built;
@@ -62,11 +82,8 @@ namespace PrefabBrushPlugin
                     unitRadius[i] = ComputeUnitRadius(e.prefab);
                     prefabScaleXZ[i] = Mathf.Max(Mathf.Abs(s.x), Mathf.Abs(s.z));
                     lookup[e.prefab] = i;
-                    if (e.weight > 0f)
-                    {
-                        total += e.weight;
-                        MaxRadius = Mathf.Max(MaxRadius, unitRadius[i] * prefabScaleXZ[i] * scaleMax);
-                    }
+                    total += Mathf.Max(e.weight, MinWeight);
+                    MaxRadius = Mathf.Max(MaxRadius, unitRadius[i] * prefabScaleXZ[i] * scaleMax);
                 }
                 cumulative[i] = total;
             }
@@ -74,11 +91,11 @@ namespace PrefabBrushPlugin
             return valid;
         }
 
-        /// <summary>True if the entry has a prefab and a positive weight.</summary>
+        /// <summary>True if the entry has a prefab assigned.</summary>
         public bool IsUsable(int i)
         {
             return built && entries != null && i >= 0 && i < entries.Length && entries[i] != null
-                   && entries[i].prefab != null && entries[i].weight > 0f;
+                   && entries[i].prefab != null;
         }
 
         /// <summary>Picks an entry index proportionally to weights.</summary>
